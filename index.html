@@ -205,6 +205,17 @@ header { grid-column: 1 / -1; display: flex; align-items: center; justify-conten
 .end-frame-btn.loading .btn-text { display: none; }
 .end-frame-btn.loading .btn-loading { display: block; }
 .end-frame-auto-badge { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--accent); border: 1px solid var(--accent-mid); background: var(--accent-dim); padding: 3px 8px; text-transform: uppercase; }
+.t2i-format-toggle { display: flex; border: 1px solid var(--border2); overflow: hidden; margin-bottom: 16px; width: fit-content; }
+.t2i-fmt-btn { padding: 8px 20px; border: none; background: var(--surface); color: var(--muted); font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.t2i-fmt-btn:first-child { border-right: 1px solid var(--border2); }
+.t2i-fmt-btn.active { background: var(--muted2); color: var(--text); position: relative; }
+.t2i-fmt-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+.sig-card.narrative { grid-column: 1 / -1; background: var(--muted3); border-color: var(--border2); }
+.sig-card.narrative .sig-card-title { font-size: 10px; }
+.sig-narrative-name { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 4px; color: var(--accent); margin-bottom: 4px; }
+.sig-narrative-sub { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 12px; }
+.sig-narrative-body { font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.9; color: var(--text); margin-bottom: 12px; }
+.sig-narrative-timeline { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); line-height: 2; border-top: 1px solid var(--border); padding-top: 10px; }
 
 input[type="file"] { display: none; }
 ::-webkit-scrollbar { width: 3px; }
@@ -347,25 +358,48 @@ input[type="file"] { display: none; }
 
       <!-- T2I TAB -->
       <div class="tab-content active" id="tab-t2i">
-        <div class="out-block">
-          <div class="out-block-header">
-            <span class="out-tag">START FRAME</span>
-            <button class="copy-btn" onclick="copyField('t2iOut', this)">Copy</button>
-          </div>
-          <textarea class="out-field readonly" id="t2iOut" readonly></textarea>
+        <div class="t2i-format-toggle">
+          <button class="t2i-fmt-btn active" id="fmtNL" onclick="setT2IFormat('nl')">Prompt</button>
+          <button class="t2i-fmt-btn" id="fmtJSON" onclick="setT2IFormat('json')">JSON</button>
         </div>
-        <div class="out-block" id="endFrameBlock" style="display:none">
-          <div class="out-block-header">
-            <span class="out-tag" style="color:var(--accent)">END FRAME</span>
-            <button class="copy-btn" onclick="copyField('t2iEndOut', this)">Copy</button>
+        <div id="t2iNLBlock">
+          <div class="out-block">
+            <div class="out-block-header">
+              <span class="out-tag">START FRAME</span>
+              <button class="copy-btn" onclick="copyField('t2iOut', this)">Copy</button>
+            </div>
+            <textarea class="out-field readonly" id="t2iOut" readonly></textarea>
           </div>
-          <textarea class="out-field readonly" id="t2iEndOut" readonly></textarea>
+          <div class="out-block" id="endFrameBlock" style="display:none">
+            <div class="out-block-header">
+              <span class="out-tag" style="color:var(--accent)">END FRAME</span>
+              <button class="copy-btn" onclick="copyField('t2iEndOut', this)">Copy</button>
+              <span id="endFrameAutoBadge" style="display:none" class="end-frame-auto-badge">AUTO</span>
+            </div>
+            <textarea class="out-field readonly" id="t2iEndOut" readonly></textarea>
+          </div>
+          <div id="endFrameBtnWrap" style="display:none">
+            <button class="end-frame-btn" id="endFrameBtn" onclick="requestEndFrame()">
+              <span class="btn-text">+ END FRAME 생성</span>
+              <span class="btn-loading">Generating...</span>
+            </button>
+          </div>
         </div>
-        <div id="endFrameBtnWrap" style="display:none">
-          <button class="end-frame-btn" id="endFrameBtn" onclick="requestEndFrame()">
-            <span class="btn-text">+ END FRAME 생성</span>
-            <span class="btn-loading">Generating...</span>
-          </button>
+        <div id="t2iJSONBlock" style="display:none">
+          <div class="out-block">
+            <div class="out-block-header">
+              <span class="out-tag">START FRAME — JSON</span>
+              <button class="copy-btn" onclick="copyField('t2iJsonOut', this)">Copy</button>
+            </div>
+            <textarea class="out-field readonly" id="t2iJsonOut" readonly style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
+          </div>
+          <div class="out-block" id="endFrameJsonBlock" style="display:none">
+            <div class="out-block-header">
+              <span class="out-tag" style="color:var(--accent)">END FRAME — JSON</span>
+              <button class="copy-btn" onclick="copyField('t2iEndJsonOut', this)">Copy</button>
+            </div>
+            <textarea class="out-field readonly" id="t2iEndJsonOut" readonly style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
+          </div>
         </div>
       </div>
 
@@ -383,6 +417,13 @@ input[type="file"] { display: none; }
       <!-- SIGNATURE TAB -->
       <div class="tab-content" id="tab-signature">
         <div class="sig-grid" id="sigGrid">
+          <div class="sig-card narrative full-width">
+            <div class="sig-card-title">영상 서사 구조</div>
+            <div id="sigNarrativeName" class="sig-narrative-name"></div>
+            <div id="sigNarrativeSub" class="sig-narrative-sub"></div>
+            <div id="sigNarrativeBody" class="sig-narrative-body"></div>
+            <div id="sigNarrativeTimeline" class="sig-narrative-timeline"></div>
+          </div>
           <div class="sig-card">
             <div class="sig-card-title">연속성 장치</div>
             <div class="sig-card-body" id="sig1"></div>
@@ -473,6 +514,12 @@ function resetKeys() {
 function showApp() {
   document.getElementById('setupScreen').classList.remove('visible');
   document.getElementById('appScreen').classList.add('visible');
+  // schema version check — clear old archive
+  const schemaVer = localStorage.getItem('flux_schema_ver');
+  if (schemaVer !== '2') {
+    localStorage.removeItem('flux_archive');
+    localStorage.setItem('flux_schema_ver', '2');
+  }
   renderArchive();
 }
 window.addEventListener('load', () => {
@@ -574,34 +621,33 @@ async function pollGeminiFile(fileId, apiKey) {
 
 async function analyzeWithGemini(fileUri) {
   const apiKey = getGeminiKey();
-  const prompt = `You are an expert cinematographer and film analyst specializing in one-take cinematography.
-
-Analyze this one-take video thoroughly and return a JSON object with this exact structure:
-
-{
-  "t2i_prompt": "A precise T2I prompt for the optimal starting frame of this video. Include: subject description, composition (camera angle + focal length), action/pose with physics, environment/location, lighting details, color palette (specific colors), and visual style. Write like a Creative Director. Dense and technical. English only.",
-  "i2v_prompt": "An I2V prompt describing MOTION ONLY (not the start frame). Structure: [START STATE] brief anchor → [MOTION] camera movement + subject movement with physics + fabric/material behavior → [END STATE] final position. Include specific directives like 'Robot-bolt', 'Locked to subject'. End with negative prompt line. English only.",
-  "continuity_device": "Analyze in Korean: 이 영상에서 컷 없이 연속성을 만드는 연출 장치들. 카메라-피사체 관계, 시선 유도 방식, 동선 설계를 구체적으로 서술.",
-  "hidden_cut_points": "Analyze in Korean: 타임스탬프와 함께 '실제 컷은 없지만 컷처럼 기능하는 순간'들을 분석. 예: 00:07 — 피사체가 프레임을 완전히 차단하는 순간. 3-5개 지점.",
-  "space_time_pattern": "Analyze in Korean: 카메라가 공간을 소비하는 방식의 패턴. 직선 관통형/순환형/확장형 등. 시간에 따른 공간 전개 방식을 구체적으로 서술.",
-  "color_palette": "Analyze in Korean and English: 영상의 컬러 팔레트 분석. 주조색, 보조색, 색온도, 채도 레벨, 특징적인 컬러 언어. Include English color names for T2I use.",
-  "needs_end_frame": "boolean — true if the video's final frame is visually significantly different from the start (different space, dramatically different subject pose/position, strong compositional shift). false if it ends in a similar visual state to the start.",
-  "end_frame_prompt": "Only if needs_end_frame is true: A precise T2I prompt for the optimal END frame of this video. Same format as t2i_prompt — subject, composition, action/pose, environment, lighting, color palette, style. If needs_end_frame is false, return empty string.",
-  "spark_ideas": [
-    {"title": "아이디어 제목 (Korean)", "description": "이 영상의 연출 문법을 변형/확장한 원테이크 아이디어. 공간, 피사체, 운동 방향, 한 줄 디렉터 메모 포함. (Korean, 3-4 sentences)"},
-    {"title": "아이디어 제목 (Korean)", "description": "..."},
-    {"title": "아이디어 제목 (Korean)", "description": "..."}
-  ]
-}
-
-Return ONLY the JSON. No markdown. No backticks. No preamble.`;
+  const prompt = 'You are an expert cinematographer and film analyst specializing in one-take cinematography.' +
+    ' Analyze this one-take video thoroughly and return a JSON object with this EXACT structure.' +
+    ' Return ONLY the JSON. No markdown. No backticks. No preamble.' +
+    ' JSON structure:' +
+    ' {' +
+    '  "t2i_prompt": "T2I prompt for optimal starting frame. STRICT FORMAT ORDER: [FORMAT declaration: Hyperrealistic cinematic still] [SUBJECT: physical description, clothing, pose with physics] [ENVIRONMENT: location, architecture, surfaces] [LIGHTING: source, direction, quality, temperature] [COLOR: specific palette — use exact color names] [TECHNICAL: shot type, lens, DOF, camera]. Dense, technical, no abstract adjectives. English only.",' +
+    '  "t2i_json": {"subject": {"description": "...", "clothing": "...", "pose": "..."}, "composition": {"shot_type": "...", "framing": "...", "lens": "...", "dof": "..."}, "environment": {"location": "...", "surfaces": "...", "architecture": "..."}, "lighting": {"source": "...", "direction": "...", "quality": "...", "temperature": "..."}, "color": {"dominant": "...", "accent": "...", "palette": "...", "mood": "..."}, "technical": {"format": "Hyperrealistic cinematic still", "negative_prompt": "..."}},' +
+    '  "i2v_prompt": "I2V prompt for MOTION ONLY. NO prose. NO descriptions of start frame. STRUCTURE ONLY: [START STATE: one-line anchor] [MOTION: action verbs first — max 3 motion beats, each under 15 words, camera directives like LOCKED TO SUBJECT / ROBOT-BOLT / STATIC HOLD] [END STATE: final position one line]. End with: Negative prompt: [list]. English only.",' +
+    '  "narrative_structure": {"name_en": "UPPERCASE ARROW-CONNECTED STRUCTURE NAME like CONCEALMENT → REVELATION → RECLAIM", "name_kr": "한국어 부제 — 연출 구조의 핵심 개념", "body": "이 영상이 무엇을 말하려 하는가, 어떤 서사 논리로 작동하는지 3-4문장. 클라이맥스 포함.", "timeline": "전개 구조: 단계명 (00:00) → 단계명 (타임스탬프) → ... 형식으로 4-6단계"},' +
+    '  "continuity_device": "Korean: 이 영상에서 컷 없이 연속성을 만드는 연출 장치들. 카메라-피사체 관계, 시선 유도, 동선 설계 구체적 서술. 장치에 영문 이름 붙이기 예: LAYERED UNVEILING.",' +
+    '  "hidden_cut_points": "Korean: 타임스탬프와 함께 컷처럼 기능하는 순간 3-5개. 형식: 00:07 — 설명.",' +
+    '  "space_time_pattern": "Korean: 카메라가 공간을 소비하는 패턴. 패턴에 영문 이름 붙이기 예: STATIC COMPRESSION. 구체적 서술.",' +
+    '  "color_palette": "Korean + English: 주조색/보조색/색온도/채도. Include English color names for T2I.",' +
+    '  "action_skeleton": "Extract the ACTION SKELETON of this video: what objects are manipulated, in what sequence, toward what goal. Format: OBJECT_A → ACTION → OBJECT_B → ACTION → RESULT. English only. Max 2 lines.",' +
+    '  "camera_skeleton": "Extract the CAMERA SKELETON: movement type, relationship to subject, spatial direction. Format: [MOVEMENT TYPE] + [SUBJECT RELATIONSHIP] + [SPATIAL DIRECTION]. English only. 1 line.",' +
+    '  "needs_end_frame": "boolean string true or false. true if final frame is visually significantly different from start.",' +
+    '  "end_frame_prompt": "Only if needs_end_frame is true: T2I prompt for END FRAME. Same 6-part format as t2i_prompt. Empty string if false.",' +
+    '  "end_frame_json": "Only if needs_end_frame is true: same JSON schema as t2i_json for END FRAME. Empty object {} if false.",' +
+    '  "spark_ideas": [{"title": "Korean title", "variable_changed": "English: which variable was changed — SPACE / CAMERA_TECHNIQUE / ACTION_DIRECTION / OBJECT", "description": "Korean 3-4 sentences. Start with: 원본 골격 유지. [변경된 변수] 교체. Then describe the result concretely — space, subject, action sequence, camera."}, {"title": "...", "variable_changed": "...", "description": "..."}, {"title": "...", "variable_changed": "...", "description": "..."}]' +
+    ' }';
 
   const body = {
     contents: [{ parts: [
       { file_data: { mime_type: 'video/mp4', file_uri: fileUri } },
       { text: prompt }
     ]}],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+    generationConfig: { temperature: 0.7, maxOutputTokens: 5000 }
   };
   const res = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + apiKey,
@@ -650,70 +696,97 @@ async function runAnalysis() {
   btn.classList.remove('loading'); btn.disabled = false;
 }
 
+// ─── T2I FORMAT TOGGLE ───────────────────────────────────────
+let t2iFormat = 'nl';
+function setT2IFormat(fmt) {
+  t2iFormat = fmt;
+  document.getElementById('fmtNL').classList.toggle('active', fmt === 'nl');
+  document.getElementById('fmtJSON').classList.toggle('active', fmt === 'json');
+  document.getElementById('t2iNLBlock').style.display = fmt === 'nl' ? '' : 'none';
+  document.getElementById('t2iJSONBlock').style.display = fmt === 'json' ? '' : 'none';
+}
+
 // ─── RENDER OUTPUT ───────────────────────────────────────────
 function renderOutput(result, readonly) {
   isReadonly = readonly;
   document.getElementById('outputEmpty').style.display = 'none';
   document.getElementById('tabBar').classList.add('visible');
 
-  // T2I — START FRAME
+  // T2I — START FRAME (NL)
   document.getElementById('t2iOut').value = result.t2i_prompt || '';
+  // T2I — START FRAME (JSON)
+  const jsonVal = result.t2i_json ? (typeof result.t2i_json === 'string' ? result.t2i_json : JSON.stringify(result.t2i_json, null, 2)) : '';
+  document.getElementById('t2iJsonOut').value = jsonVal;
+
   // T2I — END FRAME
   const endFrameBlock = document.getElementById('endFrameBlock');
+  const endFrameJsonBlock = document.getElementById('endFrameJsonBlock');
   const endFrameBtnWrap = document.getElementById('endFrameBtnWrap');
   const endOut = document.getElementById('t2iEndOut');
-  const endHeader = endFrameBlock.querySelector('.out-block-header');
-  if (result.needs_end_frame && result.end_frame_prompt) {
+  const endJsonOut = document.getElementById('t2iEndJsonOut');
+  const autoBadge = document.getElementById('endFrameAutoBadge');
+  const needsEnd = result.needs_end_frame === true || result.needs_end_frame === 'true';
+
+  if (needsEnd && result.end_frame_prompt) {
     endOut.value = result.end_frame_prompt;
-    // remove auto badge if exists
-    const existing = endHeader.querySelector('.end-frame-auto-badge');
-    if (!existing) {
-      const badge = document.createElement('span');
-      badge.className = 'end-frame-auto-badge';
-      badge.textContent = 'AUTO';
-      endHeader.appendChild(badge);
-    }
+    const endJsonVal = result.end_frame_json ? (typeof result.end_frame_json === 'string' ? result.end_frame_json : JSON.stringify(result.end_frame_json, null, 2)) : '';
+    endJsonOut.value = endJsonVal;
+    if (autoBadge) autoBadge.style.display = '';
     endFrameBlock.style.display = '';
+    endFrameJsonBlock.style.display = '';
     endFrameBtnWrap.style.display = 'none';
   } else {
     endFrameBlock.style.display = 'none';
+    endFrameJsonBlock.style.display = 'none';
     endOut.value = '';
+    endJsonOut.value = '';
+    if (autoBadge) autoBadge.style.display = 'none';
     endFrameBtnWrap.style.display = readonly ? 'none' : '';
   }
-  // I2V
+
+  // I2V — independent from END FRAME
   document.getElementById('i2vOut').value = result.i2v_prompt || '';
-  // SIGNATURE
+
+  // SIGNATURE — narrative structure
+  const ns = result.narrative_structure || {};
+  document.getElementById('sigNarrativeName').textContent = ns.name_en || '';
+  document.getElementById('sigNarrativeSub').textContent = ns.name_kr || '';
+  document.getElementById('sigNarrativeBody').textContent = ns.body || '';
+  document.getElementById('sigNarrativeTimeline').textContent = ns.timeline || '';
   document.getElementById('sig1').textContent = result.continuity_device || '';
   document.getElementById('sig2').textContent = result.hidden_cut_points || '';
   document.getElementById('sig3').textContent = result.space_time_pattern || '';
   document.getElementById('sig4').textContent = result.color_palette || '';
-  // SPARK CARDS
-  renderSparkCards(result.spark_ideas || []);
-  // Reset spark output
+
+  // SPARK
+  renderSparkCards(result.spark_ideas || [], result.action_skeleton || '', result.camera_skeleton || '');
   document.getElementById('sparkOutput').classList.remove('visible');
   document.getElementById('sparkGenArea').classList.remove('visible');
   selectedSparkIdx = -1;
 
+  // reset format toggle
+  setT2IFormat('nl');
   switchTab('t2i');
-
-  if (readonly) {
-    // show readonly banners
-    ['t2i-readonly','i2v-readonly'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'block';
-    });
-  }
 }
 
-function renderSparkCards(ideas) {
+// ─── SPARK CARDS ─────────────────────────────────────────────
+let currentActionSkeleton = '';
+let currentCameraSkeleton = '';
+
+function renderSparkCards(ideas, actionSkeleton, cameraSkeleton) {
+  currentActionSkeleton = actionSkeleton || '';
+  currentCameraSkeleton = cameraSkeleton || '';
   const container = document.getElementById('sparkCards');
   container.innerHTML = '';
   ideas.forEach((idea, i) => {
     const card = document.createElement('div');
     card.className = 'spark-card';
+    const varBadge = idea.variable_changed
+      ? '<span style="font-family:monospace;font-size:8px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border2);padding:2px 6px;margin-left:8px;text-transform:uppercase;">' + idea.variable_changed + '</span>'
+      : '';
     card.innerHTML =
       '<div class="spark-card-num">0' + (i+1) + '</div>' +
-      '<div class="spark-card-text"><strong>' + (idea.title || '') + '</strong><br>' + (idea.description || '') + '</div>' +
+      '<div class="spark-card-text"><strong>' + (idea.title || '') + '</strong>' + varBadge + '<br><br>' + (idea.description || '') + '</div>' +
       '<div class="spark-select-badge">Selected</div>';
     card.onclick = () => selectSpark(i, idea, card);
     container.appendChild(card);
@@ -792,8 +865,20 @@ async function generateSpark() {
   btn.disabled = true; btn.textContent = '...';
 
   try {
-    const system = 'You are an expert AI video prompt engineer for one-take cinematography. Given a one-take creative concept, generate a T2I prompt (starting frame), an I2V prompt (motion only), and a brief Korean description. Return ONLY valid JSON with keys: t2i, i2v, description_kr. No markdown. No backticks.';
-    const userMsg = 'One-take concept:\n\n' + idea + '\n\nGenerate T2I prompt (dense, technical, English), I2V prompt (motion only, English), and description_kr (Korean, 2-3 sentences explaining the shot concept).';
+    const skeletonContext = currentActionSkeleton
+      ? 'Original action skeleton: ' + currentActionSkeleton + '\nOriginal camera skeleton: ' + currentCameraSkeleton + '\n\n'
+      : '';
+
+    const system = 'You are an expert AI video prompt engineer for one-take cinematography.' +
+      ' Given a one-take creative concept derived from an original skeleton, generate:' +
+      ' 1) A T2I prompt for the starting frame (FORMAT → SUBJECT → ENVIRONMENT → LIGHTING → COLOR → TECHNICAL, dense and technical, English)' +
+      ' 2) An I2V prompt for motion ONLY (action verbs first, max 3 motion beats, LOCKED TO SUBJECT / ROBOT-BOLT directives, NO prose, English)' +
+      ' 3) A Korean description (2-3 sentences explaining the shot concept and what makes it distinct from the original)' +
+      ' Return ONLY valid JSON: {"t2i": "...", "i2v": "...", "description_kr": "..."}. No markdown. No backticks.';
+
+    const userMsg = skeletonContext + 'Derived one-take concept:\n\n' + idea;
+
+
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
