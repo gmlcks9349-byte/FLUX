@@ -628,7 +628,7 @@ async function analyzeWithGemini(fileUri) {
     ' {' +
     '  "t2i_prompt": "T2I prompt for optimal starting frame. STRICT FORMAT ORDER: [FORMAT declaration: Hyperrealistic cinematic still] [SUBJECT: physical description, clothing, pose with physics] [ENVIRONMENT: location, architecture, surfaces] [LIGHTING: source, direction, quality, temperature] [COLOR: specific palette — use exact color names] [TECHNICAL: shot type, lens, DOF, camera]. Dense, technical, no abstract adjectives. English only.",' +
     '  "t2i_json": {"subject": {"description": "...", "clothing": "...", "pose": "..."}, "composition": {"shot_type": "...", "framing": "...", "lens": "...", "dof": "..."}, "environment": {"location": "...", "surfaces": "...", "architecture": "..."}, "lighting": {"source": "...", "direction": "...", "quality": "...", "temperature": "..."}, "color": {"dominant": "...", "accent": "...", "palette": "...", "mood": "..."}, "technical": {"format": "Hyperrealistic cinematic still", "negative_prompt": "..."}},' +
-    '  "i2v_prompt": "I2V prompt for MOTION ONLY. NO prose. NO descriptions of start frame. STRUCTURE ONLY: [START STATE: one-line anchor] [MOTION: action verbs first — max 3 motion beats, each under 15 words, camera directives like LOCKED TO SUBJECT / ROBOT-BOLT / STATIC HOLD] [END STATE: final position one line]. End with: Negative prompt: [list]. English only.",' +
+    '  "i2v_prompt": "The T2I start frame image is already provided as reference — DO NOT describe the start state. Write MOTION and END STATE only. Format exactly: [MOTION: verb. verb. verb. — max 4 action verbs, each under 10 words] [CAMERA: single directive — STATIC HOLD or LOCKED TO SUBJECT or ROBOT-BOLT or SLOW DOLLY-IN] [END STATE: one line final position]. Negative prompt: zoom, pan, tilt, shaky cam, motion blur, morphing. English only. No preamble. No labels outside the brackets.",' +
     '  "narrative_structure": {"name_en": "UPPERCASE ARROW-CONNECTED STRUCTURE NAME like CONCEALMENT → REVELATION → RECLAIM", "name_kr": "한국어 부제 — 연출 구조의 핵심 개념", "body": "이 영상이 무엇을 말하려 하는가, 어떤 서사 논리로 작동하는지 3-4문장. 클라이맥스 포함.", "timeline": "전개 구조: 단계명 (00:00) → 단계명 (타임스탬프) → ... 형식으로 4-6단계"},' +
     '  "continuity_device": "Korean: 이 영상에서 컷 없이 연속성을 만드는 연출 장치들. 카메라-피사체 관계, 시선 유도, 동선 설계 구체적 서술. 장치에 영문 이름 붙이기 예: LAYERED UNVEILING.",' +
     '  "hidden_cut_points": "Korean: 타임스탬프와 함께 컷처럼 기능하는 순간 3-5개. 형식: 00:07 — 설명.",' +
@@ -639,7 +639,11 @@ async function analyzeWithGemini(fileUri) {
     '  "needs_end_frame": "boolean string true or false. true if final frame is visually significantly different from start.",' +
     '  "end_frame_prompt": "Only if needs_end_frame is true: T2I prompt for END FRAME. Same 6-part format as t2i_prompt. Empty string if false.",' +
     '  "end_frame_json": "Only if needs_end_frame is true: same JSON schema as t2i_json for END FRAME. Empty object {} if false.",' +
-    '  "spark_ideas": [{"title": "Korean title", "variable_changed": "English: which variable was changed — SPACE / CAMERA_TECHNIQUE / ACTION_DIRECTION / OBJECT", "description": "Korean 3-4 sentences. Start with: 원본 골격 유지. [변경된 변수] 교체. Then describe the result concretely — space, subject, action sequence, camera."}, {"title": "...", "variable_changed": "...", "description": "..."}, {"title": "...", "variable_changed": "...", "description": "..."}]' +
+    '  "spark_ideas": [' +
+    '    {"title": "Korean title for idea 1", "variable_changed": "SPACE", "description": "Korean 3-4 sentences. DO NOT use placeholder words like [변경된 변수] or [SPACE]. Instead write the actual changed element directly. Describe concretely: what space, what subject does, what objects are used, camera behavior."},' +
+    '    {"title": "Korean title for idea 2", "variable_changed": "CAMERA_TECHNIQUE", "description": "Korean 3-4 sentences. DO NOT use placeholder words. Write the actual camera technique name and describe concretely how it changes the feel."},' +
+    '    {"title": "Korean title for idea 3", "variable_changed": "ACTION_DIRECTION", "description": "Korean 3-4 sentences. DO NOT use placeholder words. Describe the reversed or altered action sequence concretely."}' +
+    '  ]' +
     ' }';
 
   const body = {
