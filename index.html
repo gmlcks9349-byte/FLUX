@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLUX — AI Creative Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #080808;
+  --surface: #0f0f0f;
+  --surface2: #141414;
+  --border: #1c1c1c;
+  --border2: #242424;
+  --accent: #E54A3A;
+  --accent-dim: #1a0a08;
+  --accent-mid: #5a1a12;
+  --text: #efefef;
+  --muted: #505050;
+  --muted2: #282828;
+  --muted3: #1a1a1a;
+}
+body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; overflow: hidden; }
+
+/* SETUP */
+#setupScreen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 2000; align-items: center; justify-content: center; }
+#setupScreen.visible { display: flex; }
+.setup-box { width: 500px; border: 1px solid var(--border2); background: var(--surface); padding: 52px; }
+.setup-logo { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 10px; color: var(--accent); margin-bottom: 4px; line-height: 1; }
+.setup-sub { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-bottom: 40px; }
+.setup-field { margin-bottom: 16px; }
+.setup-label { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: block; }
+.key-input-wrap { position: relative; }
+.key-input { width: 100%; background: var(--bg); border: 1px solid var(--border2); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 14px 48px 14px 16px; letter-spacing: 1px; transition: border-color 0.2s; }
+.key-input:focus { outline: none; border-color: var(--accent); }
+.key-input::placeholder { color: var(--muted); }
+.toggle-key { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+.setup-error { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--accent); margin-top: 8px; display: none; }
+.setup-error.visible { display: block; }
+.setup-btn { width: 100%; padding: 18px; background: var(--accent); color: #fff; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 6px; cursor: pointer; transition: all 0.2s; margin-top: 28px; }
+.setup-btn:hover { background: #f05a48; }
+
+/* LAYOUT */
+#appScreen { display: none; height: 100vh; }
+#appScreen.visible { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 56px 1fr; }
+
+/* HEADER */
+header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; border-bottom: 1px solid var(--border); background: var(--bg); z-index: 100; }
+.header-left { display: flex; align-items: baseline; gap: 12px; }
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 8px; color: var(--accent); }
+.logo-slash { color: var(--muted); font-size: 14px; }
+.logo-sub { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 20px; }
+.api-status { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted2); }
+.status-dot.active { background: #4AE54A; }
+.status-text { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.reset-btn { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 6px 12px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+.reset-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* SIDEBAR */
+#sidebar { border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; background: var(--surface); }
+.sidebar-header { padding: 20px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.sidebar-title { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+.archive-count { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--accent); }
+.new-btn { width: calc(100% - 32px); margin: 12px 16px; padding: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 4px; cursor: pointer; transition: all 0.2s; }
+.new-btn:hover { background: var(--accent-dim); }
+.archive-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.archive-item { padding: 12px 16px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; border-left: 2px solid transparent; transition: all 0.15s; }
+.archive-item:hover { background: var(--muted3); }
+.archive-item.active { border-left-color: var(--accent); background: var(--accent-dim); }
+.archive-thumb { width: 44px; height: 32px; object-fit: cover; background: var(--muted2); flex-shrink: 0; border: 1px solid var(--border); }
+.archive-thumb-placeholder { width: 44px; height: 32px; background: var(--muted2); flex-shrink: 0; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); }
+.archive-info { flex: 1; min-width: 0; }
+.archive-title { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.archive-date { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+.archive-empty { padding: 32px 16px; text-align: center; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); line-height: 2.2; text-transform: uppercase; }
+
+/* MAIN */
+#mainArea { overflow-y: auto; display: flex; flex-direction: column; }
+
+/* INPUT SECTION */
+.input-section { padding: 28px 32px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.input-row { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+.video-upload-wrap { position: relative; }
+.video-zone { border: 1px dashed var(--border2); height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; background: var(--surface); }
+.video-zone:hover, .video-zone.drag-over { border-color: var(--accent); background: var(--accent-dim); }
+.video-zone.has-video { border-style: solid; border-color: var(--border2); cursor: default; }
+.video-zone video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.video-placeholder { text-align: center; z-index: 1; pointer-events: none; }
+.video-icon { font-size: 22px; margin-bottom: 10px; opacity: 0.2; }
+.video-upload-text { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; line-height: 2; }
+.video-upload-text strong { color: var(--accent); display: block; margin-bottom: 2px; font-size: 10px; letter-spacing: 3px; }
+.video-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 10px 14px; display: none; z-index: 2; align-items: center; justify-content: space-between; }
+.video-zone.has-video .video-overlay { display: flex; }
+.video-zone.has-video .video-placeholder { display: none; }
+.video-name { font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.change-video-btn { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 4px 8px; cursor: pointer; text-transform: uppercase; flex-shrink: 0; }
+
+.right-inputs { display: flex; flex-direction: column; gap: 14px; }
+.field-label { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; display: block; }
+.title-input { width: 100%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 12px 14px; transition: border-color 0.2s; }
+.title-input:focus { outline: none; border-color: var(--accent); }
+.title-input::placeholder { color: var(--muted); font-size: 11px; }
+
+/* PROGRESS BAR */
+.progress-track { display: none; gap: 0; margin-top: 4px; }
+.progress-track.visible { display: flex; }
+.progress-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+.progress-step:not(:last-child)::after { content: ''; position: absolute; top: 6px; left: 50%; width: 100%; height: 1px; background: var(--border2); z-index: 0; }
+.progress-step.done:not(:last-child)::after { background: var(--accent); }
+.p-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted2); border: 1px solid var(--border2); z-index: 1; transition: all 0.3s; flex-shrink: 0; }
+.progress-step.active .p-dot { background: var(--accent); border-color: var(--accent); animation: pdot 1s infinite; }
+.progress-step.done .p-dot { background: var(--accent); border-color: var(--accent); }
+@keyframes pdot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+.p-label { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.progress-step.active .p-label, .progress-step.done .p-label { color: var(--accent); }
+
+.analyze-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 6px; cursor: pointer; transition: all 0.2s; margin-top: auto; }
+.analyze-btn:hover:not(:disabled) { background: #f05a48; }
+.analyze-btn:disabled { background: var(--muted2); color: var(--muted); cursor: not-allowed; }
+.analyze-btn.loading .btn-text { display: none; }
+.analyze-btn.loading .btn-loading { display: block; }
+.btn-loading { display: none; font-size: 11px; letter-spacing: 3px; }
+
+/* OUTPUT SECTION */
+.output-section { flex: 1; display: flex; flex-direction: column; padding: 0; }
+.output-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.empty-glyph { font-family: 'Bebas Neue', sans-serif; font-size: 80px; letter-spacing: 10px; color: var(--muted2); line-height: 1; }
+.empty-text { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; line-height: 2.5; text-align: center; }
+
+/* TABS */
+.tab-bar { display: none; border-bottom: 1px solid var(--border); padding: 0 32px; flex-shrink: 0; }
+.tab-bar.visible { display: flex; }
+.tab-btn { padding: 16px 24px; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; background: transparent; border: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tab-content { display: none; flex: 1; padding: 28px 32px; overflow-y: auto; }
+.tab-content.active { display: flex; flex-direction: column; gap: 20px; }
+
+/* OUTPUT BLOCKS */
+.out-block { display: flex; flex-direction: column; gap: 10px; }
+.out-block-header { display: flex; align-items: center; justify-content: space-between; }
+.out-tag { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+.copy-btn { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; padding: 5px 14px; background: transparent; border: 1px solid var(--border2); color: var(--muted); cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-btn.done { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.out-field { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.85; padding: 18px; resize: vertical; min-height: 160px; }
+.out-field:focus { outline: none; }
+.out-field.readonly { cursor: default; }
+
+/* SIGNATURE */
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.sig-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; }
+.sig-card-title { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.sig-card-title::before { content: ''; width: 4px; height: 4px; background: var(--accent); display: inline-block; flex-shrink: 0; }
+.sig-card-body { font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.9; color: var(--text); white-space: pre-wrap; }
+.sig-card.full-width { grid-column: 1 / -1; }
+
+/* SPARK */
+.spark-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.spark-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 6px; color: var(--accent); }
+.spark-sub { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); }
+.spark-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.spark-card { border: 1px solid var(--border2); padding: 18px 20px; cursor: pointer; transition: all 0.2s; position: relative; background: var(--surface); }
+.spark-card:hover { border-color: var(--accent-mid); background: var(--muted3); }
+.spark-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.spark-card-num { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 3px; color: var(--accent); margin-bottom: 6px; opacity: 0.6; }
+.spark-card.selected .spark-card-num { opacity: 1; }
+.spark-card-text { font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.8; color: var(--text); }
+.spark-select-badge { position: absolute; top: 14px; right: 14px; font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--accent); border: 1px solid var(--accent); padding: 3px 8px; display: none; text-transform: uppercase; }
+.spark-card.selected .spark-select-badge { display: block; }
+
+.spark-generate-area { display: none; border: 1px solid var(--border2); background: var(--surface); }
+.spark-generate-area.visible { display: block; }
+.spark-textarea-wrap { padding: 16px; border-bottom: 1px solid var(--border); }
+.spark-textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.8; resize: none; min-height: 80px; }
+.spark-textarea:focus { outline: none; }
+.spark-gen-footer { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+.spark-hint { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1px; color: var(--muted); }
+.spark-gen-btn { padding: 10px 24px; background: var(--accent); color: #fff; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 4px; cursor: pointer; transition: all 0.2s; }
+.spark-gen-btn:hover:not(:disabled) { background: #f05a48; }
+.spark-gen-btn:disabled { background: var(--muted2); color: var(--muted); cursor: not-allowed; }
+
+.spark-output { display: none; border-top: 1px solid var(--border); padding: 24px; flex-direction: column; gap: 16px; }
+.spark-output.visible { display: flex; }
+.spark-out-label { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+.spark-out-field { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.85; padding: 16px; resize: vertical; min-height: 100px; }
+.spark-out-field:focus { outline: none; }
+.spark-kr-box { background: var(--bg); border: 1px solid var(--border); padding: 16px; font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.9; color: var(--text); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 28px; right: 28px; background: var(--accent); color: #fff; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; padding: 12px 22px; text-transform: uppercase; transform: translateY(60px); opacity: 0; transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 9999; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* READONLY VIEW */
+.readonly-banner { background: var(--muted3); border: 1px solid var(--border); padding: 10px 16px; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+
+.end-frame-btn { padding: 10px 20px; background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 4px; cursor: pointer; transition: all 0.2s; }
+.end-frame-btn:hover:not(:disabled) { background: var(--accent-dim); }
+.end-frame-btn:disabled { border-color: var(--muted2); color: var(--muted); cursor: not-allowed; }
+.end-frame-btn .btn-loading { display: none; font-size: 11px; letter-spacing: 3px; }
+.end-frame-btn.loading .btn-text { display: none; }
+.end-frame-btn.loading .btn-loading { display: block; }
+.end-frame-auto-badge { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--accent); border: 1px solid var(--accent-mid); background: var(--accent-dim); padding: 3px 8px; text-transform: uppercase; }
+
+input[type="file"] { display: none; }
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--muted2); }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo">FLUX</div>
+    <div class="setup-sub">One-Take Reference Analyzer · AI Creative Lab</div>
+    <div class="setup-field">
+      <span class="setup-label">Claude API Key</span>
+      <div class="key-input-wrap">
+        <input class="key-input" type="password" id="claudeKeyInput" placeholder="sk-ant-api03-..." />
+        <button class="toggle-key" onclick="toggleVis('claudeKeyInput')">👁</button>
+      </div>
+    </div>
+    <div class="setup-field">
+      <span class="setup-label">Gemini API Key</span>
+      <div class="key-input-wrap">
+        <input class="key-input" type="password" id="geminiKeyInput" placeholder="AIza..." />
+        <button class="toggle-key" onclick="toggleVis('geminiKeyInput')">👁</button>
+      </div>
+    </div>
+    <div class="setup-error" id="setupError">API 키를 확인해주세요.</div>
+    <button class="setup-btn" onclick="saveKeys()">저장하고 시작하기</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <header>
+    <div class="header-left">
+      <div class="logo">FLUX</div>
+      <span class="logo-slash">/</span>
+      <span class="logo-sub">AI Creative Lab</span>
+    </div>
+    <div class="header-right">
+      <div class="api-status">
+        <div class="status-dot active" id="geminiDot"></div>
+        <span class="status-text">GEMINI</span>
+      </div>
+      <div class="api-status">
+        <div class="status-dot active" id="claudeDot"></div>
+        <span class="status-text">CLAUDE</span>
+      </div>
+      <button class="reset-btn" onclick="resetKeys()">API Keys</button>
+    </div>
+  </header>
+
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Archive</span>
+      <span class="archive-count" id="archiveCount">0 entries</span>
+    </div>
+    <button class="new-btn" onclick="startNew()">+ NEW ANALYSIS</button>
+    <div class="archive-list" id="archiveList">
+      <div class="archive-empty" id="archiveEmpty">No analyses yet.<br>Upload a video<br>to get started.</div>
+    </div>
+  </div>
+
+  <div id="mainArea">
+    <!-- INPUT -->
+    <div class="input-section" id="inputSection">
+      <div class="input-row">
+        <div class="video-upload-wrap">
+          <div class="video-zone" id="videoZone"
+               onclick="triggerVideoInput()"
+               ondragover="onDragOver(event)"
+               ondragleave="onDragLeave(event)"
+               ondrop="onDrop(event)">
+            <div class="video-placeholder">
+              <div class="video-icon">▶</div>
+              <div class="video-upload-text">
+                <strong>Drop video here</strong>
+                MP4 / MOV / WEBM · Max 50MB
+              </div>
+            </div>
+            <video id="videoPreview" muted playsinline></video>
+            <div class="video-overlay">
+              <span class="video-name" id="videoName"></span>
+              <button class="change-video-btn" onclick="event.stopPropagation(); triggerVideoInput()">Change</button>
+            </div>
+          </div>
+          <input type="file" id="videoInput" accept="video/mp4,video/quicktime,video/webm" onchange="onVideoSelect(event)">
+          <canvas id="thumbCanvas" style="display:none"></canvas>
+        </div>
+
+        <div class="right-inputs">
+          <div>
+            <span class="field-label">Title</span>
+            <input class="title-input" type="text" id="titleInput" placeholder="e.g. Gucci SS26 — Roof Scene" />
+          </div>
+
+          <div>
+            <div class="progress-track" id="progressTrack">
+              <div class="progress-step" id="pStep1">
+                <div class="p-dot"></div>
+                <span class="p-label">Upload</span>
+              </div>
+              <div class="progress-step" id="pStep2">
+                <div class="p-dot"></div>
+                <span class="p-label">Analyze</span>
+              </div>
+              <div class="progress-step" id="pStep3">
+                <div class="p-dot"></div>
+                <span class="p-label">Generate</span>
+              </div>
+              <div class="progress-step" id="pStep4">
+                <div class="p-dot"></div>
+                <span class="p-label">Done</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+            <span class="btn-text">Analyze</span>
+            <span class="btn-loading">Processing...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="output-section" id="outputSection">
+      <div class="output-empty" id="outputEmpty">
+        <div class="empty-glyph">FLUX</div>
+        <div class="empty-text">Upload a one-take reference<br>and extract its DNA</div>
+      </div>
+
+      <div class="tab-bar" id="tabBar">
+        <button class="tab-btn active" onclick="switchTab('t2i')">T2I</button>
+        <button class="tab-btn" onclick="switchTab('i2v')">I2V</button>
+        <button class="tab-btn" onclick="switchTab('signature')">SIGNATURE</button>
+        <button class="tab-btn" onclick="switchTab('spark')">SPARK</button>
+      </div>
+
+      <!-- T2I TAB -->
+      <div class="tab-content active" id="tab-t2i">
+        <div class="out-block">
+          <div class="out-block-header">
+            <span class="out-tag">START FRAME</span>
+            <button class="copy-btn" onclick="copyField('t2iOut', this)">Copy</button>
+          </div>
+          <textarea class="out-field readonly" id="t2iOut" readonly></textarea>
+        </div>
+        <div class="out-block" id="endFrameBlock" style="display:none">
+          <div class="out-block-header">
+            <span class="out-tag" style="color:var(--accent)">END FRAME</span>
+            <button class="copy-btn" onclick="copyField('t2iEndOut', this)">Copy</button>
+          </div>
+          <textarea class="out-field readonly" id="t2iEndOut" readonly></textarea>
+        </div>
+        <div id="endFrameBtnWrap" style="display:none">
+          <button class="end-frame-btn" id="endFrameBtn" onclick="requestEndFrame()">
+            <span class="btn-text">+ END FRAME 생성</span>
+            <span class="btn-loading">Generating...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- I2V TAB -->
+      <div class="tab-content" id="tab-i2v">
+        <div class="out-block">
+          <div class="out-block-header">
+            <span class="out-tag">I2V Prompt</span>
+            <button class="copy-btn" onclick="copyField('i2vOut', this)">Copy</button>
+          </div>
+          <textarea class="out-field readonly" id="i2vOut" readonly></textarea>
+        </div>
+      </div>
+
+      <!-- SIGNATURE TAB -->
+      <div class="tab-content" id="tab-signature">
+        <div class="sig-grid" id="sigGrid">
+          <div class="sig-card">
+            <div class="sig-card-title">연속성 장치</div>
+            <div class="sig-card-body" id="sig1"></div>
+          </div>
+          <div class="sig-card">
+            <div class="sig-card-title">숨겨진 컷 포인트</div>
+            <div class="sig-card-body" id="sig2"></div>
+          </div>
+          <div class="sig-card">
+            <div class="sig-card-title">공간-시간 패턴</div>
+            <div class="sig-card-body" id="sig3"></div>
+          </div>
+          <div class="sig-card">
+            <div class="sig-card-title">컬러 팔레트</div>
+            <div class="sig-card-body" id="sig4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPARK TAB -->
+      <div class="tab-content" id="tab-spark">
+        <div class="spark-header">
+          <div>
+            <div class="spark-title">SPARK</div>
+            <div class="spark-sub">파생 원테이크 아이디어 — 선택 후 편집하여 생성</div>
+          </div>
+        </div>
+        <div class="spark-cards" id="sparkCards"></div>
+        <div class="spark-generate-area" id="sparkGenArea">
+          <div class="spark-textarea-wrap">
+            <textarea class="spark-textarea" id="sparkTextarea" rows="3" placeholder="선택한 아이디어를 자유롭게 수정하세요..."></textarea>
+          </div>
+          <div class="spark-gen-footer">
+            <span class="spark-hint">편집 후 Generate를 누르면 T2I + I2V + 설명이 생성됩니다</span>
+            <button class="spark-gen-btn" id="sparkGenBtn" onclick="generateSpark()">Generate</button>
+          </div>
+        </div>
+        <div class="spark-output" id="sparkOutput">
+          <div>
+            <div class="spark-out-label">T2I</div>
+            <textarea class="spark-out-field" id="sparkT2I" readonly></textarea>
+            <button class="copy-btn" style="margin-top:8px" onclick="copyField('sparkT2I', this)">Copy</button>
+          </div>
+          <div>
+            <div class="spark-out-label">I2V</div>
+            <textarea class="spark-out-field" id="sparkI2V" readonly></textarea>
+            <button class="copy-btn" style="margin-top:8px" onclick="copyField('sparkI2V', this)">Copy</button>
+          </div>
+          <div>
+            <div class="spark-out-label">한 줄 설명</div>
+            <div class="spark-kr-box" id="sparkKR"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── API KEYS ───────────────────────────────────────────────
+function getClaudeKey() { return localStorage.getItem('claude_key') || ''; }
+function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
+
+function toggleVis(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+function saveKeys() {
+  const ck = document.getElementById('claudeKeyInput').value.trim();
+  const gk = document.getElementById('geminiKeyInput').value.trim();
+  if (!ck.startsWith('sk-ant-') || !gk.startsWith('AIza')) {
+    document.getElementById('setupError').classList.add('visible'); return;
+  }
+  localStorage.setItem('claude_key', ck);
+  localStorage.setItem('gemini_key', gk);
+  showApp();
+}
+function resetKeys() {
+  localStorage.removeItem('claude_key');
+  localStorage.removeItem('gemini_key');
+  document.getElementById('claudeKeyInput').value = '';
+  document.getElementById('geminiKeyInput').value = '';
+  document.getElementById('setupScreen').classList.add('visible');
+  document.getElementById('appScreen').classList.remove('visible');
+}
+function showApp() {
+  document.getElementById('setupScreen').classList.remove('visible');
+  document.getElementById('appScreen').classList.add('visible');
+  renderArchive();
+}
+window.addEventListener('load', () => {
+  if (getClaudeKey() && getGeminiKey()) showApp();
+  else document.getElementById('setupScreen').classList.add('visible');
+});
+
+// ─── STATE ──────────────────────────────────────────────────
+let videoFile = null, videoBase64 = null, thumbDataUrl = null;
+let currentResult = null;
+let isReadonly = false;
+let selectedSparkIdx = -1;
+
+// ─── VIDEO UPLOAD ────────────────────────────────────────────
+function triggerVideoInput() {
+  if (isReadonly) return;
+  document.getElementById('videoInput').click();
+}
+function onDragOver(e) { e.preventDefault(); if (!isReadonly) document.getElementById('videoZone').classList.add('drag-over'); }
+function onDragLeave() { document.getElementById('videoZone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('videoZone').classList.remove('drag-over');
+  if (isReadonly) return;
+  const f = e.dataTransfer.files[0];
+  if (f && (f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm)$/i))) loadVideo(f);
+}
+function onVideoSelect(e) {
+  const f = e.target.files[0]; if (f) loadVideo(f);
+  e.target.value = '';
+}
+function loadVideo(file) {
+  if (file.size > 50 * 1024 * 1024) { toast('최대 50MB까지 업로드 가능합니다'); return; }
+  videoFile = file;
+  const url = URL.createObjectURL(file);
+  const vid = document.getElementById('videoPreview');
+  vid.src = url;
+  vid.load();
+  vid.addEventListener('loadeddata', () => {
+    extractThumb(vid);
+  }, { once: true });
+  document.getElementById('videoName').textContent = file.name;
+  document.getElementById('videoZone').classList.add('has-video');
+}
+function extractThumb(vid) {
+  const canvas = document.getElementById('thumbCanvas');
+  canvas.width = 160; canvas.height = 90;
+  const ctx = canvas.getContext('2d');
+  vid.currentTime = 0.1;
+  vid.addEventListener('seeked', () => {
+    ctx.drawImage(vid, 0, 0, 160, 90);
+    thumbDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+  }, { once: true });
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────
+function setProgress(step) {
+  document.getElementById('progressTrack').classList.add('visible');
+  ['pStep1','pStep2','pStep3','pStep4'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('active', 'done');
+    if (i + 1 < step) el.classList.add('done');
+    else if (i + 1 === step) el.classList.add('active');
+  });
+}
+function clearProgress() {
+  document.getElementById('progressTrack').classList.remove('visible');
+  ['pStep1','pStep2','pStep3','pStep4'].forEach(id => document.getElementById(id).classList.remove('active','done'));
+}
+
+// ─── GEMINI FILE API ─────────────────────────────────────────
+async function uploadToGemini(file) {
+  const apiKey = getGeminiKey();
+  const metadata = { file: { display_name: file.name, mime_type: file.type || 'video/mp4' } };
+  const formData = new FormData();
+  formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  formData.append('file', file);
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=multipart&key=' + apiKey,
+    { method: 'POST', body: formData }
+  );
+  const data = await res.json();
+  if (!data.file?.uri) throw new Error('Gemini upload failed: ' + JSON.stringify(data));
+  const fileId = data.file.uri.split('/').pop();
+  return await pollGeminiFile(fileId, apiKey);
+}
+
+async function pollGeminiFile(fileId, apiKey) {
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 5000));
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/files/' + fileId + '?key=' + apiKey);
+    const data = await res.json();
+    const state = data?.state || data?.file?.state;
+    if (state === 'ACTIVE') return data?.uri || data?.file?.uri || ('https://generativelanguage.googleapis.com/v1beta/files/' + fileId);
+    if (state === 'FAILED') throw new Error('Gemini file processing failed');
+  }
+  throw new Error('Gemini polling timeout');
+}
+
+async function analyzeWithGemini(fileUri) {
+  const apiKey = getGeminiKey();
+  const prompt = `You are an expert cinematographer and film analyst specializing in one-take cinematography.
+
+Analyze this one-take video thoroughly and return a JSON object with this exact structure:
+
+{
+  "t2i_prompt": "A precise T2I prompt for the optimal starting frame of this video. Include: subject description, composition (camera angle + focal length), action/pose with physics, environment/location, lighting details, color palette (specific colors), and visual style. Write like a Creative Director. Dense and technical. English only.",
+  "i2v_prompt": "An I2V prompt describing MOTION ONLY (not the start frame). Structure: [START STATE] brief anchor → [MOTION] camera movement + subject movement with physics + fabric/material behavior → [END STATE] final position. Include specific directives like 'Robot-bolt', 'Locked to subject'. End with negative prompt line. English only.",
+  "continuity_device": "Analyze in Korean: 이 영상에서 컷 없이 연속성을 만드는 연출 장치들. 카메라-피사체 관계, 시선 유도 방식, 동선 설계를 구체적으로 서술.",
+  "hidden_cut_points": "Analyze in Korean: 타임스탬프와 함께 '실제 컷은 없지만 컷처럼 기능하는 순간'들을 분석. 예: 00:07 — 피사체가 프레임을 완전히 차단하는 순간. 3-5개 지점.",
+  "space_time_pattern": "Analyze in Korean: 카메라가 공간을 소비하는 방식의 패턴. 직선 관통형/순환형/확장형 등. 시간에 따른 공간 전개 방식을 구체적으로 서술.",
+  "color_palette": "Analyze in Korean and English: 영상의 컬러 팔레트 분석. 주조색, 보조색, 색온도, 채도 레벨, 특징적인 컬러 언어. Include English color names for T2I use.",
+  "needs_end_frame": "boolean — true if the video's final frame is visually significantly different from the start (different space, dramatically different subject pose/position, strong compositional shift). false if it ends in a similar visual state to the start.",
+  "end_frame_prompt": "Only if needs_end_frame is true: A precise T2I prompt for the optimal END frame of this video. Same format as t2i_prompt — subject, composition, action/pose, environment, lighting, color palette, style. If needs_end_frame is false, return empty string.",
+  "spark_ideas": [
+    {"title": "아이디어 제목 (Korean)", "description": "이 영상의 연출 문법을 변형/확장한 원테이크 아이디어. 공간, 피사체, 운동 방향, 한 줄 디렉터 메모 포함. (Korean, 3-4 sentences)"},
+    {"title": "아이디어 제목 (Korean)", "description": "..."},
+    {"title": "아이디어 제목 (Korean)", "description": "..."}
+  ]
+}
+
+Return ONLY the JSON. No markdown. No backticks. No preamble.`;
+
+  const body = {
+    contents: [{ parts: [
+      { file_data: { mime_type: 'video/mp4', file_uri: fileUri } },
+      { text: prompt }
+    ]}],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+  };
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + apiKey,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  );
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error('Gemini analysis failed: ' + JSON.stringify(data));
+  return parseJSON(raw);
+}
+
+// ─── MAIN ANALYSIS ───────────────────────────────────────────
+async function runAnalysis() {
+  if (!videoFile) { toast('영상을 먼저 업로드해주세요'); return; }
+  const title = document.getElementById('titleInput').value.trim() || 'Untitled';
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+  clearProgress();
+
+  try {
+    // Step 1: Upload
+    setProgress(1);
+    const fileUri = await uploadToGemini(videoFile);
+
+    // Step 2: Analyze
+    setProgress(2);
+    const result = await analyzeWithGemini(fileUri);
+
+    // Step 3: Done
+    setProgress(3);
+    setProgress(4);
+
+    currentResult = result;
+    renderOutput(result, false);
+    saveToArchive(title, result, thumbDataUrl);
+    renderArchive();
+    toast('분석 완료');
+
+  } catch (err) {
+    clearProgress();
+    toast('오류가 발생했습니다: ' + err.message);
+    console.error(err);
+  }
+
+  btn.classList.remove('loading'); btn.disabled = false;
+}
+
+// ─── RENDER OUTPUT ───────────────────────────────────────────
+function renderOutput(result, readonly) {
+  isReadonly = readonly;
+  document.getElementById('outputEmpty').style.display = 'none';
+  document.getElementById('tabBar').classList.add('visible');
+
+  // T2I — START FRAME
+  document.getElementById('t2iOut').value = result.t2i_prompt || '';
+  // T2I — END FRAME
+  const endFrameBlock = document.getElementById('endFrameBlock');
+  const endFrameBtnWrap = document.getElementById('endFrameBtnWrap');
+  const endOut = document.getElementById('t2iEndOut');
+  const endHeader = endFrameBlock.querySelector('.out-block-header');
+  if (result.needs_end_frame && result.end_frame_prompt) {
+    endOut.value = result.end_frame_prompt;
+    // remove auto badge if exists
+    const existing = endHeader.querySelector('.end-frame-auto-badge');
+    if (!existing) {
+      const badge = document.createElement('span');
+      badge.className = 'end-frame-auto-badge';
+      badge.textContent = 'AUTO';
+      endHeader.appendChild(badge);
+    }
+    endFrameBlock.style.display = '';
+    endFrameBtnWrap.style.display = 'none';
+  } else {
+    endFrameBlock.style.display = 'none';
+    endOut.value = '';
+    endFrameBtnWrap.style.display = readonly ? 'none' : '';
+  }
+  // I2V
+  document.getElementById('i2vOut').value = result.i2v_prompt || '';
+  // SIGNATURE
+  document.getElementById('sig1').textContent = result.continuity_device || '';
+  document.getElementById('sig2').textContent = result.hidden_cut_points || '';
+  document.getElementById('sig3').textContent = result.space_time_pattern || '';
+  document.getElementById('sig4').textContent = result.color_palette || '';
+  // SPARK CARDS
+  renderSparkCards(result.spark_ideas || []);
+  // Reset spark output
+  document.getElementById('sparkOutput').classList.remove('visible');
+  document.getElementById('sparkGenArea').classList.remove('visible');
+  selectedSparkIdx = -1;
+
+  switchTab('t2i');
+
+  if (readonly) {
+    // show readonly banners
+    ['t2i-readonly','i2v-readonly'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    });
+  }
+}
+
+function renderSparkCards(ideas) {
+  const container = document.getElementById('sparkCards');
+  container.innerHTML = '';
+  ideas.forEach((idea, i) => {
+    const card = document.createElement('div');
+    card.className = 'spark-card';
+    card.innerHTML =
+      '<div class="spark-card-num">0' + (i+1) + '</div>' +
+      '<div class="spark-card-text"><strong>' + (idea.title || '') + '</strong><br>' + (idea.description || '') + '</div>' +
+      '<div class="spark-select-badge">Selected</div>';
+    card.onclick = () => selectSpark(i, idea, card);
+    container.appendChild(card);
+  });
+}
+
+function selectSpark(idx, idea, cardEl) {
+  if (isReadonly) return;
+  selectedSparkIdx = idx;
+  document.querySelectorAll('.spark-card').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+  const textarea = document.getElementById('sparkTextarea');
+  textarea.value = (idea.title ? idea.title + '\n\n' : '') + (idea.description || '');
+  document.getElementById('sparkGenArea').classList.add('visible');
+  document.getElementById('sparkOutput').classList.remove('visible');
+}
+
+// ─── END FRAME 수동 요청 ────────────────────────────────────────
+async function requestEndFrame() {
+  if (!currentResult) return;
+  const btn = document.getElementById('endFrameBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    const context = 'Video analysis context:\n' +
+      'T2I (start frame): ' + (currentResult.t2i_prompt || '') + '\n' +
+      'I2V motion: ' + (currentResult.i2v_prompt || '') + '\n' +
+      'Continuity device: ' + (currentResult.continuity_device || '') + '\n' +
+      'Space-time pattern: ' + (currentResult.space_time_pattern || '') + '\n' +
+      'Color palette: ' + (currentResult.color_palette || '');
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getClaudeKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: 'You are an expert T2I prompt engineer for one-take cinematography. Based on the provided video analysis, generate a precise T2I prompt for the END FRAME of the video — where the camera and subject arrive after the full one-take motion. The end frame should reflect the logical conclusion of the motion described. Output ONLY the prompt text. No preamble. No labels. English only.',
+        messages: [{ role: 'user', content: context }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const endPrompt = data.content[0].text.trim();
+
+    currentResult.end_frame_prompt = endPrompt;
+    currentResult.needs_end_frame = true;
+
+    const endOut = document.getElementById('t2iEndOut');
+    endOut.value = endPrompt;
+    const endFrameBlock = document.getElementById('endFrameBlock');
+    const endHeader = endFrameBlock.querySelector('.out-block-header');
+    const existing = endHeader.querySelector('.end-frame-auto-badge');
+    if (existing) existing.remove();
+    endFrameBlock.style.display = '';
+    document.getElementById('endFrameBtnWrap').style.display = 'none';
+    toast('END FRAME 생성 완료');
+  } catch (err) {
+    toast('오류: ' + err.message);
+    console.error(err);
+  }
+  btn.classList.remove('loading'); btn.disabled = false;
+}
+
+// ─── SPARK GENERATE ──────────────────────────────────────────
+async function generateSpark() {
+  const idea = document.getElementById('sparkTextarea').value.trim();
+  if (!idea) { toast('아이디어를 입력해주세요'); return; }
+
+  const btn = document.getElementById('sparkGenBtn');
+  btn.disabled = true; btn.textContent = '...';
+
+  try {
+    const system = 'You are an expert AI video prompt engineer for one-take cinematography. Given a one-take creative concept, generate a T2I prompt (starting frame), an I2V prompt (motion only), and a brief Korean description. Return ONLY valid JSON with keys: t2i, i2v, description_kr. No markdown. No backticks.';
+    const userMsg = 'One-take concept:\n\n' + idea + '\n\nGenerate T2I prompt (dense, technical, English), I2V prompt (motion only, English), and description_kr (Korean, 2-3 sentences explaining the shot concept).';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getClaudeKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: system,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const parsed = parseJSON(data.content[0].text);
+
+    document.getElementById('sparkT2I').value = parsed.t2i || '';
+    document.getElementById('sparkI2V').value = parsed.i2v || '';
+    document.getElementById('sparkKR').textContent = parsed.description_kr || '';
+    document.getElementById('sparkOutput').classList.add('visible');
+    toast('SPARK 생성 완료');
+  } catch (err) {
+    toast('오류: ' + err.message);
+    console.error(err);
+  }
+  btn.disabled = false; btn.textContent = 'Generate';
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const tabs = ['t2i','i2v','signature','spark'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ─── ARCHIVE ─────────────────────────────────────────────────
+function getArchive() {
+  try { return JSON.parse(localStorage.getItem('flux_archive') || '[]'); } catch { return []; }
+}
+function saveToArchive(title, result, thumb) {
+  const archive = getArchive();
+  archive.unshift({
+    id: Date.now(),
+    title: title,
+    date: new Date().toISOString().split('T')[0],
+    thumb: thumb || null,
+    result: result
+  });
+  localStorage.setItem('flux_archive', JSON.stringify(archive));
+}
+function renderArchive() {
+  const archive = getArchive();
+  const list = document.getElementById('archiveList');
+  const empty = document.getElementById('archiveEmpty');
+  document.getElementById('archiveCount').textContent = archive.length + ' ' + (archive.length === 1 ? 'entry' : 'entries');
+
+  if (archive.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; list.appendChild(empty); return; }
+  empty.style.display = 'none';
+
+  list.innerHTML = '';
+  archive.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'archive-item';
+    el.dataset.id = item.id;
+
+    let thumbEl = '';
+    if (item.thumb) {
+      thumbEl = '<img class="archive-thumb" src="' + item.thumb + '" alt="">';
+    } else {
+      thumbEl = '<div class="archive-thumb-placeholder">▶</div>';
+    }
+
+    el.innerHTML = thumbEl +
+      '<div class="archive-info">' +
+        '<div class="archive-title">' + item.title + '</div>' +
+        '<div class="archive-date">' + item.date + '</div>' +
+      '</div>';
+
+    el.onclick = () => loadArchiveItem(item, el);
+    list.appendChild(el);
+  });
+}
+
+function loadArchiveItem(item, el) {
+  document.querySelectorAll('.archive-item').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  currentResult = item.result;
+  renderOutput(item.result, true);
+}
+
+function startNew() {
+  document.querySelectorAll('.archive-item').forEach(a => a.classList.remove('active'));
+  isReadonly = false;
+  videoFile = null;
+  videoBase64 = null;
+  thumbDataUrl = null;
+  currentResult = null;
+
+  const vid = document.getElementById('videoPreview');
+  vid.src = '';
+  document.getElementById('videoZone').classList.remove('has-video');
+  document.getElementById('titleInput').value = '';
+  clearProgress();
+
+  document.getElementById('outputEmpty').style.display = 'flex';
+  document.getElementById('tabBar').classList.remove('visible');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-t2i').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────
+function parseJSON(text) {
+  try { return JSON.parse(text); } catch {}
+  try { const m = text.match(/```json\s*([\s\S]*?)```/); if (m) return JSON.parse(m[1].trim()); } catch {}
+  try { const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); } catch {}
+  throw new Error('JSON 파싱 실패');
+}
+function copyField(id, btn) {
+  const el = document.getElementById(id);
+  const val = el.value || el.textContent;
+  if (!val) return;
+  navigator.clipboard.writeText(val).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('done'); }, 2000);
+  });
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
