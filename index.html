@@ -365,10 +365,17 @@ input[type="file"] { display: none; }
         <div id="t2iNLBlock">
           <div class="out-block">
             <div class="out-block-header">
-              <span class="out-tag">START FRAME</span>
-              <button class="copy-btn" onclick="copyField('t2iOut', this)">Copy</button>
+              <span class="out-tag">FRAME A <span id="frameATimestamp" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></span>
+              <button class="copy-btn" onclick="copyField('t2iFrameA', this)">Copy</button>
             </div>
-            <textarea class="out-field readonly" id="t2iOut" readonly></textarea>
+            <textarea class="out-field" id="t2iFrameA"></textarea>
+          </div>
+          <div class="out-block">
+            <div class="out-block-header">
+              <span class="out-tag">FRAME B <span id="frameBTimestamp" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></span>
+              <button class="copy-btn" onclick="copyField('t2iFrameB', this)">Copy</button>
+            </div>
+            <textarea class="out-field" id="t2iFrameB"></textarea>
           </div>
           <div class="out-block" id="endFrameBlock" style="display:none">
             <div class="out-block-header">
@@ -376,7 +383,7 @@ input[type="file"] { display: none; }
               <button class="copy-btn" onclick="copyField('t2iEndOut', this)">Copy</button>
               <span id="endFrameAutoBadge" style="display:none" class="end-frame-auto-badge">AUTO</span>
             </div>
-            <textarea class="out-field readonly" id="t2iEndOut" readonly></textarea>
+            <textarea class="out-field" id="t2iEndOut"></textarea>
           </div>
           <div id="endFrameBtnWrap" style="display:none">
             <button class="end-frame-btn" id="endFrameBtn" onclick="requestEndFrame()">
@@ -388,17 +395,24 @@ input[type="file"] { display: none; }
         <div id="t2iJSONBlock" style="display:none">
           <div class="out-block">
             <div class="out-block-header">
-              <span class="out-tag">START FRAME — JSON</span>
-              <button class="copy-btn" onclick="copyField('t2iJsonOut', this)">Copy</button>
+              <span class="out-tag">FRAME A — JSON <span id="frameAJsonTimestamp" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></span>
+              <button class="copy-btn" onclick="copyField('t2iJsonA', this)">Copy</button>
             </div>
-            <textarea class="out-field readonly" id="t2iJsonOut" readonly style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
+            <textarea class="out-field" id="t2iJsonA" style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
+          </div>
+          <div class="out-block">
+            <div class="out-block-header">
+              <span class="out-tag">FRAME B — JSON <span id="frameBJsonTimestamp" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></span>
+              <button class="copy-btn" onclick="copyField('t2iJsonB', this)">Copy</button>
+            </div>
+            <textarea class="out-field" id="t2iJsonB" style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
           </div>
           <div class="out-block" id="endFrameJsonBlock" style="display:none">
             <div class="out-block-header">
               <span class="out-tag" style="color:var(--accent)">END FRAME — JSON</span>
               <button class="copy-btn" onclick="copyField('t2iEndJsonOut', this)">Copy</button>
             </div>
-            <textarea class="out-field readonly" id="t2iEndJsonOut" readonly style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
+            <textarea class="out-field" id="t2iEndJsonOut" style="color:#E54A3A;font-size:11px;min-height:200px"></textarea>
           </div>
         </div>
       </div>
@@ -516,9 +530,9 @@ function showApp() {
   document.getElementById('appScreen').classList.add('visible');
   // schema version check — clear old archive
   const schemaVer = localStorage.getItem('flux_schema_ver');
-  if (schemaVer !== '2') {
+  if (schemaVer !== '3') {
     localStorage.removeItem('flux_archive');
-    localStorage.setItem('flux_schema_ver', '2');
+    localStorage.setItem('flux_schema_ver', '3');
   }
   renderArchive();
 }
@@ -626,9 +640,26 @@ async function analyzeWithGemini(fileUri) {
     ' Return ONLY the JSON. No markdown. No backticks. No preamble.' +
     ' JSON structure:' +
     ' {' +
-    '  "t2i_prompt": "T2I prompt for optimal starting frame. STRICT FORMAT ORDER: [FORMAT declaration: Hyperrealistic cinematic still] [SUBJECT: physical description, clothing, pose with physics] [ENVIRONMENT: location, architecture, surfaces] [LIGHTING: source, direction, quality, temperature] [COLOR: specific palette — use exact color names] [TECHNICAL: shot type, lens, DOF, camera]. Dense, technical, no abstract adjectives. English only.",' +
-    '  "t2i_json": {"subject": {"description": "...", "clothing": "...", "pose": "..."}, "composition": {"shot_type": "...", "framing": "...", "lens": "...", "dof": "..."}, "environment": {"location": "...", "surfaces": "...", "architecture": "..."}, "lighting": {"source": "...", "direction": "...", "quality": "...", "temperature": "..."}, "color": {"dominant": "...", "accent": "...", "palette": "...", "mood": "..."}, "technical": {"format": "Hyperrealistic cinematic still", "negative_prompt": "..."}},' +
-    '  "i2v_prompt": "The T2I start frame image is already provided as reference — DO NOT describe the start state. Write MOTION and END STATE only. Format exactly: [MOTION: verb. verb. verb. — max 4 action verbs, each under 10 words] [CAMERA: single directive — STATIC HOLD or LOCKED TO SUBJECT or ROBOT-BOLT or SLOW DOLLY-IN] [END STATE: one line final position]. Negative prompt: zoom, pan, tilt, shaky cam, motion blur, morphing. English only. No preamble. No labels outside the brackets.",' +
+    '  "t2i_frames": [' +
+    '    {' +
+    '      "label": "FRAME A",' +
+    '      "timestamp": "exact timestamp string e.g. 00:01",' +
+    '      "context": "one sentence: what is happening at this exact moment in the narrative",' +
+    '      "prompt": "T2I prompt. STRICT 7-LAYER ORDER — write each layer as a continuous sentence, no brackets or labels in output: (1) SCENE DIRECTIVE: declare camera-space relationship and dominant visual structure device with its English name e.g. STATIC COMPRESSION / FRAME WITHIN A FRAME / REFLECTIVE LAYERING — one sentence stating how the device functions in this frame. (2) SUBJECT: physical description, clothing with fabric/color specifics, pose with exact weight distribution and physics state. (3) ENVIRONMENT: location type, architectural materials, floor/wall/surfaces, depth layers. (4) LIGHTING: dominant light source name + direction + quality + color temperature. Secondary fill if present. (5) FILM/LENS: name actual film stock or camera body + lens spec + characteristic rendering. (6) COLOR: dominant and accent colors using proper color names only — no abstract adjectives. (7) TECHNICAL: shot type, focus plane, depth of field. End with: Hyperrealistic cinematic still. English only. Dense and directive, not descriptive.",' +
+    '      "json": {"subject": {"description": "...", "clothing": "...", "pose": "..."}, "composition": {"shot_type": "...", "framing": "...", "lens": "...", "dof": "..."}, "environment": {"location": "...", "surfaces": "...", "architecture": "..."}, "lighting": {"source": "...", "direction": "...", "quality": "...", "temperature": "..."}, "film_lens": {"stock": "...", "camera": "...", "lens": "...", "characteristics": "..."}, "color": {"dominant": "...", "accent": "...", "palette": "..."}, "technical": {"format": "Hyperrealistic cinematic still"}}' +
+    '    },' +
+    '    {' +
+    '      "label": "FRAME B",' +
+    '      "timestamp": "exact timestamp string e.g. 00:03",' +
+    '      "context": "one sentence: what is happening at this exact moment in the narrative",' +
+    '      "prompt": "T2I prompt. Same 7-layer format as FRAME A. This frame must be narratively and visually distinct from FRAME A — select a moment from a different narrative beat in the early section of the video. English only.",' +
+    '      "json": {"subject": {"description": "...", "clothing": "...", "pose": "..."}, "composition": {"shot_type": "...", "framing": "...", "lens": "...", "dof": "..."}, "environment": {"location": "...", "surfaces": "...", "architecture": "..."}, "lighting": {"source": "...", "direction": "...", "quality": "...", "temperature": "..."}, "film_lens": {"stock": "...", "camera": "...", "lens": "...", "characteristics": "..."}, "color": {"dominant": "...", "accent": "...", "palette": "..."}, "technical": {"format": "Hyperrealistic cinematic still"}}' +
+    '    }' +
+    '  ],' +
+    '  "needs_end_frame": "boolean string true or false. true if final frame is visually significantly different from the early frames.",' +
+    '  "end_frame_prompt": "Only if needs_end_frame is true. T2I prompt for END FRAME using same 7-layer order: (1) SCENE DIRECTIVE with device name and function. (2) SUBJECT with physics state. (3) ENVIRONMENT. (4) LIGHTING dominant source. (5) FILM/LENS matching the same stock/camera as t2i_frames for visual consistency. (6) COLOR using proper color names. (7) TECHNICAL. End with: Hyperrealistic cinematic still. The spatial structure and lighting logic must remain consistent with FRAME A and FRAME B. Empty string if false.",' +
+    '  "end_frame_json": "Only if needs_end_frame is true: same JSON schema as t2i_frames json for END FRAME. Empty object {} if false.",' +
+    '  "i2v_prompt": "I2V prompt. The reference image is already provided — do NOT re-describe the subject or space. Write in 4 blocks with these exact labels on separate lines: [MOTION] First [action 1 with physical weight and connection to next]. Then [action 2]. Finally [action 3 leading naturally to end state]. [CAMERA] Single directive only — STATIC HOLD or LOCKED TO SUBJECT or SLOW DOLLY-IN or SLOW PAN or HANDHELD FOLLOW. One sentence on camera-subject relationship. [CONTINUITY] Continuous single take. No cuts. No morphing. Consistent lighting throughout. Preserve subject identity across all frames. [END STATE] One line: final position and state of subject. English only.",' +
     '  "narrative_structure": {"name_en": "UPPERCASE ARROW-CONNECTED STRUCTURE NAME like CONCEALMENT → REVELATION → RECLAIM", "name_kr": "한국어 부제 — 연출 구조의 핵심 개념", "body": "이 영상이 무엇을 말하려 하는가, 어떤 서사 논리로 작동하는지 3-4문장. 클라이맥스 포함.", "timeline": "전개 구조: 단계명 (00:00) → 단계명 (타임스탬프) → ... 형식으로 4-6단계"},' +
     '  "continuity_device": "Korean: 이 영상에서 컷 없이 연속성을 만드는 연출 장치들. 카메라-피사체 관계, 시선 유도, 동선 설계 구체적 서술. 장치에 영문 이름 붙이기 예: LAYERED UNVEILING.",' +
     '  "hidden_cut_points": "Korean: 타임스탬프와 함께 컷처럼 기능하는 순간 3-5개. 형식: 00:07 — 설명.",' +
@@ -636,9 +667,6 @@ async function analyzeWithGemini(fileUri) {
     '  "color_palette": "Korean + English: 주조색/보조색/색온도/채도. Include English color names for T2I.",' +
     '  "action_skeleton": "Extract the ACTION SKELETON of this video: what objects are manipulated, in what sequence, toward what goal. Format: OBJECT_A → ACTION → OBJECT_B → ACTION → RESULT. English only. Max 2 lines.",' +
     '  "camera_skeleton": "Extract the CAMERA SKELETON: movement type, relationship to subject, spatial direction. Format: [MOVEMENT TYPE] + [SUBJECT RELATIONSHIP] + [SPATIAL DIRECTION]. English only. 1 line.",' +
-    '  "needs_end_frame": "boolean string true or false. true if final frame is visually significantly different from start.",' +
-    '  "end_frame_prompt": "Only if needs_end_frame is true: T2I prompt for END FRAME. Same 6-part format as t2i_prompt. Empty string if false.",' +
-    '  "end_frame_json": "Only if needs_end_frame is true: same JSON schema as t2i_json for END FRAME. Empty object {} if false.",' +
     '  "spark_ideas": [' +
     '    {"title": "Korean title for idea 1", "variable_changed": "SPACE", "description": "Korean 3-4 sentences. DO NOT use placeholder words like [변경된 변수] or [SPACE]. Instead write the actual changed element directly. Describe concretely: what space, what subject does, what objects are used, camera behavior."},' +
     '    {"title": "Korean title for idea 2", "variable_changed": "CAMERA_TECHNIQUE", "description": "Korean 3-4 sentences. DO NOT use placeholder words. Write the actual camera technique name and describe concretely how it changes the feel."},' +
@@ -651,7 +679,7 @@ async function analyzeWithGemini(fileUri) {
       { file_data: { mime_type: 'video/mp4', file_uri: fileUri } },
       { text: prompt }
     ]}],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 5000 }
+    generationConfig: { temperature: 0.7, maxOutputTokens: 6000 }
   };
   const res = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + apiKey,
@@ -716,11 +744,25 @@ function renderOutput(result, readonly) {
   document.getElementById('outputEmpty').style.display = 'none';
   document.getElementById('tabBar').classList.add('visible');
 
-  // T2I — START FRAME (NL)
-  document.getElementById('t2iOut').value = result.t2i_prompt || '';
-  // T2I — START FRAME (JSON)
-  const jsonVal = result.t2i_json ? (typeof result.t2i_json === 'string' ? result.t2i_json : JSON.stringify(result.t2i_json, null, 2)) : '';
-  document.getElementById('t2iJsonOut').value = jsonVal;
+  // T2I — FRAME A / FRAME B
+  const frames = result.t2i_frames || [];
+  const frameA = frames[0] || {};
+  const frameB = frames[1] || {};
+
+  document.getElementById('t2iFrameA').value = frameA.prompt || '';
+  document.getElementById('t2iFrameB').value = frameB.prompt || '';
+
+  const tsA = frameA.timestamp ? '[' + frameA.timestamp + ']' : '';
+  const tsB = frameB.timestamp ? '[' + frameB.timestamp + ']' : '';
+  document.getElementById('frameATimestamp').textContent = tsA;
+  document.getElementById('frameBTimestamp').textContent = tsB;
+  document.getElementById('frameAJsonTimestamp').textContent = tsA;
+  document.getElementById('frameBJsonTimestamp').textContent = tsB;
+
+  const jsonA = frameA.json ? (typeof frameA.json === 'string' ? frameA.json : JSON.stringify(frameA.json, null, 2)) : '';
+  const jsonB = frameB.json ? (typeof frameB.json === 'string' ? frameB.json : JSON.stringify(frameB.json, null, 2)) : '';
+  document.getElementById('t2iJsonA').value = jsonA;
+  document.getElementById('t2iJsonB').value = jsonB;
 
   // T2I — END FRAME
   const endFrameBlock = document.getElementById('endFrameBlock');
@@ -748,7 +790,7 @@ function renderOutput(result, readonly) {
     endFrameBtnWrap.style.display = readonly ? 'none' : '';
   }
 
-  // I2V — independent from END FRAME
+  // I2V
   document.getElementById('i2vOut').value = result.i2v_prompt || '';
 
   // SIGNATURE — narrative structure
@@ -816,7 +858,8 @@ async function requestEndFrame() {
 
   try {
     const context = 'Video analysis context:\n' +
-      'T2I (start frame): ' + (currentResult.t2i_prompt || '') + '\n' +
+      'FRAME A T2I: ' + (currentResult.t2i_frames && currentResult.t2i_frames[0] ? currentResult.t2i_frames[0].prompt : '') + '\n' +
+      'FRAME B T2I: ' + (currentResult.t2i_frames && currentResult.t2i_frames[1] ? currentResult.t2i_frames[1].prompt : '') + '\n' +
       'I2V motion: ' + (currentResult.i2v_prompt || '') + '\n' +
       'Continuity device: ' + (currentResult.continuity_device || '') + '\n' +
       'Space-time pattern: ' + (currentResult.space_time_pattern || '') + '\n' +
@@ -833,7 +876,7 @@ async function requestEndFrame() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        system: 'You are an expert T2I prompt engineer for one-take cinematography. Based on the provided video analysis, generate a precise T2I prompt for the END FRAME of the video — where the camera and subject arrive after the full one-take motion. The end frame should reflect the logical conclusion of the motion described. Output ONLY the prompt text. No preamble. No labels. English only.',
+        system: 'You are an expert T2I prompt engineer for one-take cinematography. Based on the provided video analysis, generate a T2I prompt for the END FRAME — the final visual state after the full one-take motion resolves. Use this strict 7-layer order as one continuous dense paragraph: (1) SCENE DIRECTIVE: same spatial structure device as the start frames, state how the device functions at the end state. (2) SUBJECT: physical description with final pose and weight distribution. (3) ENVIRONMENT: same location, same architectural materials as start frames. (4) LIGHTING: dominant light source — if subject has moved from exterior to interior, reflect the lighting transition. (5) FILM/LENS: use the same film stock and lens as the start frames for visual consistency. (6) COLOR: dominant and accent colors using proper color names only. (7) TECHNICAL: shot type, focus plane, depth of field. End with: Hyperrealistic cinematic still. Output ONLY the prompt text. No preamble. No labels. English only.',
         messages: [{ role: 'user', content: context }]
       })
     });
@@ -875,8 +918,8 @@ async function generateSpark() {
 
     const system = 'You are an expert AI video prompt engineer for one-take cinematography.' +
       ' Given a one-take creative concept derived from an original skeleton, generate:' +
-      ' 1) A T2I prompt for the starting frame (FORMAT → SUBJECT → ENVIRONMENT → LIGHTING → COLOR → TECHNICAL, dense and technical, English)' +
-      ' 2) An I2V prompt for motion ONLY (action verbs first, max 3 motion beats, LOCKED TO SUBJECT / ROBOT-BOLT directives, NO prose, English)' +
+      ' 1) A T2I prompt for the starting frame using this strict 7-layer order as one continuous dense paragraph: (1) SCENE DIRECTIVE — camera-space relationship and dominant visual structure device with its English name. (2) SUBJECT — physical description, clothing with fabric/color specifics, pose with exact weight distribution. (3) ENVIRONMENT — location type, architectural materials, surfaces, depth layers. (4) LIGHTING — dominant light source, direction, quality, color temperature. (5) FILM/LENS — actual film stock or camera body, lens spec, characteristic rendering. (6) COLOR — dominant and accent colors using proper color names only, no abstract adjectives. (7) TECHNICAL — shot type, focus plane, depth of field. End with: Hyperrealistic cinematic still. English only.' +
+      ' 2) An I2V prompt in 4 labeled blocks: [MOTION] First [action 1 with physical connection]. Then [action 2]. Finally [action 3 leading to end state]. [CAMERA] Single directive only — one sentence on camera-subject relationship. [CONTINUITY] Continuous single take. No cuts. No morphing. Consistent lighting. Preserve subject identity. [END STATE] One line final position. English only.' +
       ' 3) A Korean description (2-3 sentences explaining the shot concept and what makes it distinct from the original)' +
       ' Return ONLY valid JSON: {"t2i": "...", "i2v": "...", "description_kr": "..."}. No markdown. No backticks.';
 
